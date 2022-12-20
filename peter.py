@@ -5,6 +5,8 @@ import requests
 from PIL import Image
 
 from settings import tweepy_config
+from settings import logger
+
 
 
 def get_priorities_at_random():
@@ -67,39 +69,50 @@ class PeterObi:
         self.suffix = "\nIT’S POSSIBLE\nLP\n#automated_task"
 
     def get_random_priority(self):
-        random_post = get_priorities_at_random()
-        TWEET_STATUS = random_post.get("text")
-        PRIORITY = random_post.get("priority")
-        FILE_URL = random_post.get("image")
-        FILE_PATH = f"/pictures/{PRIORITY}.jpg"
+        try:
+            random_post = get_priorities_at_random()
+            TWEET_STATUS = random_post.get("text")
+            PRIORITY = random_post.get("priority")
+            FILE_URL = random_post.get("image")
+            FILE_PATH = f"/pictures/{PRIORITY}.jpg"
+        except Exception as reason:
+            logger.exception(f"Error getting random priority: {reason}")
 
         return FILE_URL, FILE_PATH, TWEET_STATUS, PRIORITY
 
     def download_image(self, FILE_URL, FILE_PATH):
-        im = Image.open(requests.get(FILE_URL, stream=True).raw)
-        im.save(os.getcwd() + FILE_PATH)
+        try:
+            im = Image.open(requests.get(FILE_URL, stream=True).raw)
+            im.save(os.getcwd() + FILE_PATH)
+        except Exception as reason:
+            logger.exception(f"Error downloading images: {reason}")
 
     def make_a_post(self, TWEET_STATUS, FILE_PATH):
-        filename = os.getcwd() + FILE_PATH
-
-        upload_result = self.tweepy_api.media_upload(filename)
-        self.tweepy_api.update_status(
-            status=TWEET_STATUS,
-            media_ids=[upload_result.media_id_string],
-            auto_populate_reply_metadata=True)
+        try:
+            filename = os.getcwd() + FILE_PATH
+            upload_result = self.tweepy_api.media_upload(filename)
+            self.tweepy_api.update_status(
+                status=TWEET_STATUS,
+                media_ids=[upload_result.media_id_string],
+                auto_populate_reply_metadata=True)
+        except Exception as reason:
+            logger.exception(f"Error send a post to twitter: {reason}")
 
     def make_post_with_multiple_images(self, filenames, TWEET_STATUS):
-        media_ids = []
-        for name in filenames:
-            filename = os.getcwd() + f"/pictures/{name}"
-            res = self.tweepy_api.media_upload(filename)
-            media_ids.append(res.media_id)
+        try:
+            media_ids = []
+            for name in filenames:
+                filename = os.getcwd() + f"/pictures/{name}"
+                res = self.tweepy_api.media_upload(filename)
+                media_ids.append(res.media_id)
 
-        TWEET_STATUS = f"{self.prefix} '{TWEET_STATUS}'{self.suffix}"
-        self.tweepy_api.update_status(
-            status=TWEET_STATUS,
-            media_ids=media_ids,
-            auto_populate_reply_metadata=True)
+            TWEET_STATUS = f"{self.prefix} '{TWEET_STATUS}'{self.suffix}"
+            self.tweepy_api.update_status(
+                status=TWEET_STATUS,
+                media_ids=media_ids,
+                auto_populate_reply_metadata=True)
+        except Exception as reason:
+            logger.exception(f"Error sending multiple post to twitter: {reason}")
 
 
 if __name__ == "__main__":
